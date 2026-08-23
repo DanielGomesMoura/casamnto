@@ -23,7 +23,8 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           name: nomeConvidado || "Convidado do Casamento",
-          cpfCnpj: "69671134297" // O Asaas exige um CPF para criar o cliente
+          cpfCnpj: "69671134297", // O Asaas exige um CPF para criar o cliente
+          notificationDisabled: true
         })
       });
       const customerData = await customerRes.json();
