@@ -26,27 +26,48 @@ const BRIDE_NAME = "Ana";
 const GROOM_NAME = "Daniel";
 
 const SLIDER_IMAGES = [
-  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2069&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=2070&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?q=80&w=2070&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1520854221256-17451cc331bf?q=80&w=2070&auto=format&fit=crop"
+  "https://images.unsplash.com/photo-1520854221256-17451cc331bf?q=80&w=2070&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?q=80&w=2070&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?q=80&w=2070&auto=format&fit=crop"
 ];
 
 // Slides da Tela "Nossa História"
 const STORY_SLIDES = [
   {
-    image: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=2070&auto=format&fit=crop",
-    text: "Tudo começou com um sorriso inesperado, e de repente...",
+    image: "./imagem1.jpeg",
+    text: "Tudo começou com um sorriso inesperado em um instituto de lingua inglesa...",
     date: "O Início"
   },
   {
-    image: "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?q=80&w=2070&auto=format&fit=crop",
-    text: "Cada momento ao teu lado transformou-se na minha memória favorita.",
+    image: "./imagem2.jpeg",
+    text: "Uma mensagem no chat da empresa pedindo ajuda técnica...",
+    date: "O Início"
+  },
+  {
+    image: "./imagem3.jpeg",
+    text: "Uma simples interação que se tornou algo muito maior...",
+    date: "O Início"
+  },
+  {
+    image: "./imagem4.jpeg",
+    text: "Encontros marcados para irmos pegar ônibus juntos...",
     date: "A Jornada"
   },
   {
-    image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=2070&auto=format&fit=crop",
-    text: "E agora, estamos prestes a escrever o nosso 'Para Sempre'.",
+    image: "./imagem5.jpeg",
+    text: "Até que a convidei para o nosso primeiro encontro oficial...",
+    date: "O Início do Namoro"
+  },
+  {
+    image: "./imagem7.jpeg",
+    text: "... E naquele dia eu tive a certeza que queria passar o resto da minha vida com ela.",
+    date: "O Início do Namoro"
+  },
+  {
+    image: "./imagem6.jpeg",
+    text: "E agora, estamos prestes a escrever o nosso 'Para Sempre' em frente de todos que amamos.",
     date: "O Futuro"
   }
 ];
@@ -1104,71 +1125,71 @@ function PresentesScreen({ conviteData }: { conviteData: ConviteData | null }) {
     <>
       <div className="pt-24 pb-20 px-4 min-h-screen bg-stone-50 animate-fade-in font-sans">
         <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16 mt-8">
-          <h1 className="font-serif text-5xl mb-4 text-stone-800">Lista de Presentes</h1>
-          <p className="text-stone-600 max-w-2xl mx-auto">
-            O maior presente é ter vocês com a gente neste dia! Mas se quiserem nos abençoar com algo a mais para nossa vida a dois, criamos essa listinha simbólica.
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center p-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-400"></div>
+          <div className="text-center mb-16 mt-8">
+            <h1 className="font-serif text-5xl mb-4 text-stone-800">Lista de Presentes</h1>
+            <p className="text-stone-600 max-w-2xl mx-auto">
+              O maior presente é ter vocês com a gente neste dia! Mas se quiserem nos abençoar com algo a mais para nossa vida a dois, criamos essa listinha simbólica.
+            </p>
           </div>
-        ) : presentes.length === 0 ? (
-          <div className="text-center text-stone-500 p-12 bg-white rounded-2xl shadow-sm border border-stone-200">
-            A lista de presentes ainda está sendo preparada. Volte em breve!
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {presentes.filter(presente => {
-              const titleLower = (presente.titulo || '').toLowerCase();
-              if (titleLower.includes('primeiro casal de padrinhos') || titleLower.includes('casal de padrinhos')) {
-                 return conviteData?.categoria === 'padrinho' || conviteData?.categoria === 'madrinha';
-              }
-              return true;
-            }).map(presente => {
-              const titleLower = (presente.titulo || '').toLowerCase();
-              const isExclusivo = presente.isExclusivo || 
-                                  titleLower.includes('pedir') || 
-                                  titleLower.includes('padrinho') || 
-                                  titleLower.includes('buffet');
-              const isVendido = isExclusivo && presente.status === 'vendido';
 
-              return (
-                <div key={presente.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow relative">
-                  {isVendido && (
-                    <div className="absolute top-4 right-4 bg-stone-900 text-white text-xs font-bold px-3 py-1.5 rounded-full z-10 shadow-lg uppercase tracking-wider">
-                      Esgotado
+          {loading ? (
+            <div className="flex justify-center p-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-400"></div>
+            </div>
+          ) : presentes.length === 0 ? (
+            <div className="text-center text-stone-500 p-12 bg-white rounded-2xl shadow-sm border border-stone-200">
+              A lista de presentes ainda está sendo preparada. Volte em breve!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {presentes.filter(presente => {
+                const titleLower = (presente.titulo || '').toLowerCase();
+                if (titleLower.includes('primeiro casal de padrinhos') || titleLower.includes('casal de padrinhos')) {
+                  return conviteData?.categoria === 'padrinho' || conviteData?.categoria === 'madrinha';
+                }
+                return true;
+              }).map(presente => {
+                const titleLower = (presente.titulo || '').toLowerCase();
+                const isExclusivo = presente.isExclusivo ||
+                  titleLower.includes('pedir') ||
+                  titleLower.includes('padrinho') ||
+                  titleLower.includes('buffet');
+                const isVendido = isExclusivo && presente.status === 'vendido';
+
+                return (
+                  <div key={presente.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow relative">
+                    {isVendido && (
+                      <div className="absolute top-4 right-4 bg-stone-900 text-white text-xs font-bold px-3 py-1.5 rounded-full z-10 shadow-lg uppercase tracking-wider">
+                        Esgotado
+                      </div>
+                    )}
+                    <div className="h-48 overflow-hidden bg-stone-100 relative">
+                      <img src={presente.imagemUrl} alt={presente.titulo} className={`w-full h-full object-cover transition-transform duration-500 ${isVendido ? 'grayscale opacity-70' : 'hover:scale-105'}`} />
                     </div>
-                  )}
-                  <div className="h-48 overflow-hidden bg-stone-100 relative">
-                    <img src={presente.imagemUrl} alt={presente.titulo} className={`w-full h-full object-cover transition-transform duration-500 ${isVendido ? 'grayscale opacity-70' : 'hover:scale-105'}`} />
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3 className={`font-semibold mb-2 ${isVendido ? 'text-stone-400' : 'text-stone-800'}`}>{presente.titulo}</h3>
+                      <p className={`${isVendido ? 'text-stone-400' : 'text-rose-500'} font-medium mt-auto mb-4 text-lg`}>
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(presente.valor)}
+                      </p>
+                      <button
+                        onClick={() => handlePresentear(presente)}
+                        disabled={isVendido}
+                        className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${isVendido ? 'bg-stone-100 text-stone-400 cursor-not-allowed' : 'bg-stone-800 text-white hover:bg-stone-900'}`}
+                      >
+                        {isVendido ? 'Já Comprado' : 'Presentear'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="p-5 flex flex-col flex-1">
-                    <h3 className={`font-semibold mb-2 ${isVendido ? 'text-stone-400' : 'text-stone-800'}`}>{presente.titulo}</h3>
-                    <p className={`${isVendido ? 'text-stone-400' : 'text-rose-500'} font-medium mt-auto mb-4 text-lg`}>
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(presente.valor)}
-                    </p>
-                    <button
-                      onClick={() => handlePresentear(presente)}
-                      disabled={isVendido}
-                      className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${isVendido ? 'bg-stone-100 text-stone-400 cursor-not-allowed' : 'bg-stone-800 text-white hover:bg-stone-900'}`}
-                    >
-                      {isVendido ? 'Já Comprado' : 'Presentear'}
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
 
-    {/* Modal PIX */}
-    {modalOpen && selectedPresente && (
-      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      {/* Modal PIX */}
+      {modalOpen && selectedPresente && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-8 relative animate-fade-in shadow-2xl">
             <button
               onClick={() => setModalOpen(false)}
@@ -1181,66 +1202,67 @@ function PresentesScreen({ conviteData }: { conviteData: ConviteData | null }) {
               const currentP = presentes.find(p => p.id === selectedPresente.id);
               const isPaidNow = currentP && currentP.lastPaidAt && currentP.lastPaidAt > openedAt;
               return isPaidNow ? (
-              <div className="text-center py-8">
-                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 className="text-green-500 w-12 h-12" />
-                </div>
-                <h2 className="font-serif text-3xl mb-4 text-stone-800">Pagamento Confirmado!</h2>
-                <p className="text-stone-600 mb-8 text-lg">
-                  Muito obrigado por nos presentear com <strong>"{selectedPresente.titulo}"</strong>. Ficamos imensamente felizes com o seu carinho!
-                </p>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="w-full bg-stone-800 hover:bg-stone-900 text-white font-medium py-4 rounded-xl transition-all shadow-md"
-                >
-                  Fechar
-                </button>
-              </div>
-            ) : (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Heart className="text-rose-400" size={32} />
-                </div>
-                <h2 className="font-serif text-2xl mb-2 text-stone-800">Muito Obrigado!</h2>
-                <p className="text-stone-600 mb-6 text-sm">
-                  Para presentear com <strong>"{selectedPresente.titulo}"</strong>, faça um PIX no valor abaixo usando a função "Copia e Cola" do seu banco.
-                </p>
-
-                <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 mb-6 text-center space-y-4 shadow-inner">
-                  {loadingPix ? (
-                    <div className="flex flex-col items-center justify-center py-6">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-rose-400 mb-4"></div>
-                      <p className="text-stone-500 text-sm">Gerando seu PIX...</p>
-                    </div>
-                  ) : pixError ? (
-                    <div className="text-red-500 text-sm py-4">{pixError}</div>
-                  ) : pixImage ? (
-                    <div className="flex flex-col items-center">
-                      <img src={`data:image/png;base64,${pixImage}`} alt="QR Code PIX" className="w-48 h-48 rounded-lg shadow-sm mb-4" />
-                      <div>
-                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Valor do Presente</p>
-                        <p className="font-medium text-rose-500 text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedPresente.valor)}</p>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
-                {pixPayload && (
+                <div className="text-center py-8">
+                  <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle2 className="text-green-500 w-12 h-12" />
+                  </div>
+                  <h2 className="font-serif text-3xl mb-4 text-stone-800">Pagamento Confirmado!</h2>
+                  <p className="text-stone-600 mb-8 text-lg">
+                    Muito obrigado por nos presentear com <strong>"{selectedPresente.titulo}"</strong>. Ficamos imensamente felizes com o seu carinho!
+                  </p>
                   <button
-                    onClick={copiarPix}
-                    className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium hover:bg-rose-600 transition-colors mb-3 shadow-md"
+                    onClick={() => setModalOpen(false)}
+                    className="w-full bg-stone-800 hover:bg-stone-900 text-white font-medium py-4 rounded-xl transition-all shadow-md"
                   >
-                    Copiar Chave PIX
+                    Fechar
                   </button>
-                )}
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="w-full bg-stone-100 text-stone-600 py-3 rounded-xl font-medium hover:bg-stone-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            ) })()}
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Heart className="text-rose-400" size={32} />
+                  </div>
+                  <h2 className="font-serif text-2xl mb-2 text-stone-800">Muito Obrigado!</h2>
+                  <p className="text-stone-600 mb-6 text-sm">
+                    Para presentear com <strong>"{selectedPresente.titulo}"</strong>, faça um PIX no valor abaixo usando a função "Copia e Cola" do seu banco.
+                  </p>
+
+                  <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 mb-6 text-center space-y-4 shadow-inner">
+                    {loadingPix ? (
+                      <div className="flex flex-col items-center justify-center py-6">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-rose-400 mb-4"></div>
+                        <p className="text-stone-500 text-sm">Gerando seu PIX...</p>
+                      </div>
+                    ) : pixError ? (
+                      <div className="text-red-500 text-sm py-4">{pixError}</div>
+                    ) : pixImage ? (
+                      <div className="flex flex-col items-center">
+                        <img src={`data:image/png;base64,${pixImage}`} alt="QR Code PIX" className="w-48 h-48 rounded-lg shadow-sm mb-4" />
+                        <div>
+                          <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Valor do Presente</p>
+                          <p className="font-medium text-rose-500 text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedPresente.valor)}</p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {pixPayload && (
+                    <button
+                      onClick={copiarPix}
+                      className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium hover:bg-rose-600 transition-colors mb-3 shadow-md"
+                    >
+                      Copiar Chave PIX
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setModalOpen(false)}
+                    className="w-full bg-stone-100 text-stone-600 py-3 rounded-xl font-medium hover:bg-stone-200 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
