@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { Users, CheckCircle2, Loader2, ArrowLeft, Lock, ChevronRight, Gift, Plus, Trash2, Image as ImageIcon, Edit2 } from 'lucide-react';
+import { Users, CheckCircle2, Loader2, ArrowLeft, Lock, ChevronRight, Gift, Plus, Trash2, Image as ImageIcon, Edit2, MessageCircle, Copy, QrCode, X, Download } from 'lucide-react';
 import { db } from '../firebase.config';
+import QRCode from 'react-qr-code';
+import * as htmlToImage from 'html-to-image';
+import { saveAs } from 'file-saver';
+import { jsPDF } from 'jspdf';
 
 interface Convidado {
     nome: string;
@@ -34,6 +38,7 @@ export default function AdminApp() {
 
     // Estados para Convidados
     const [familias, setFamilias] = useState<FamiliaData[]>([]);
+    const [filtroConvidados, setFiltroConvidados] = useState<'confirmados' | 'pendentes' | 'todos'>('confirmados');
 
     // Estados para Presentes
     const [presentes, setPresentes] = useState<Presente[]>([]);
@@ -43,6 +48,14 @@ export default function AdminApp() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Estado para o Modal do QR Code / Convite
+    const [qrCodeModal, setQrCodeModal] = useState({ isOpen: false, link: '', familiaNome: '' });
+    const [generatedPdfBlob, setGeneratedPdfBlob] = useState<Blob | null>(null);
+    const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
+    const [coverImageBlob, setCoverImageBlob] = useState<Blob | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // Senha de acesso (pode alterar aqui se quiser)
     const ADMIN_PASSWORD = "Bed200816@";
@@ -159,6 +172,133 @@ export default function AdminApp() {
         }
     };
 
+    const copyToClipboard = (id: string) => {
+        const link = window.location.origin + '/?id=' + id;
+        navigator.clipboard.writeText(link);
+        alert('Link copiado para a área de transferência!');
+    };
+
+    const shareOnWhatsApp = (familia: FamiliaData) => {
+        const link = window.location.origin + '/?id=' + familia.id;
+        const message = `Olá, família ${familia.familia}! Vocês foram convidados para o nosso casamento. Acessem o convite pelo link: ${link}`;
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+    };
+
+    const openQrCode = (familia: FamiliaData) => {
+        const link = window.location.origin + '/?id=' + familia.id;
+        setQrCodeModal({ isOpen: true, link, familiaNome: familia.familia });
+    };
+
+    useEffect(() => {
+        if (qrCodeModal.isOpen) {
+            setGeneratedPdfBlob(null);
+            setCoverImageBlob(null);
+
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+
+            if (generatedPdfUrl) URL.revokeObjectURL(generatedPdfUrl);
+            setGeneratedPdfUrl(null);
+
+            setIsGenerating(true);
+
+            setTimeout(async () => {
+                const element = document.getElementById('convite-canvas');
+                if (!element) {
+                    setIsGenerating(false);
+                    return;
+                }
+
+                try {
+                    await new Promise(r => setTimeout(r, 200));
+
+                    // Gera a imagem principal (Capa) como PNG para o clipboard funcionar
+                    const dataUrl = await htmlToImage.toPng(element, {
+                        pixelRatio: 2
+                    });
+
+                    const coverBlob = await (await fetch(dataUrl)).blob();
+                    setCoverImageBlob(coverBlob);
+                    setPreviewUrl(URL.createObjectURL(coverBlob));
+
+                    // Cria o PDF com tamanho "físico" de 25% (256x256) 
+                    // para que abra visualmente menor, mas a qualidade interna continua 1024!
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'px',
+                        format: [256, 256]
+                    });
+
+                    // Configura o PDF para abrir com zoom normal (agora o tamanho físico já é menor)
+                    pdf.setDisplayMode(100);
+
+                    pdf.deletePage(1);
+
+                    // Helper para converter imagem em Base64
+                    const getBase64 = async (url: string) => {
+                        const res = await fetch(url);
+                        const b = await res.blob();
+                        return new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result as string);
+                            reader.readAsDataURL(b);
+                        });
+                    };
+
+                    // PÁGINA 1: Imagem 3
+                    try {
+                        const b64_3 = await getBase64('/fundo-convite-3.jpg');
+                        pdf.addPage([256, 256]);
+                        pdf.addImage(b64_3, 'JPEG', 0, 0, 256, 256);
+                    } catch (e) {
+                        console.warn("Imagem 3 não encontrada");
+                    }
+
+                    // PÁGINA 2: Imagem 2
+                    try {
+                        const b64_2 = await getBase64('/fundo-convite-2.jpg');
+                        pdf.addPage([256, 256]);
+                        pdf.addImage(b64_2, 'JPEG', 0, 0, 256, 256);
+                    } catch (e) {
+                        console.warn("Imagem 2 não encontrada");
+                    }
+
+                    // PÁGINA 3: Capa gerada (QR Code)
+                    pdf.addPage([256, 256]);
+                    pdf.addImage(dataUrl, 'PNG', 0, 0, 256, 256);
+
+                    const pdfBlob = pdf.output('blob');
+                    setGeneratedPdfBlob(pdfBlob);
+                    setGeneratedPdfUrl(URL.createObjectURL(pdfBlob));
+                } catch (err) {
+                    console.error('Erro ao gerar PDF do convite:', err);
+                } finally {
+                    setIsGenerating(false);
+                }
+            }, 300);
+        } else {
+            setGeneratedPdfBlob(null);
+            setCoverImageBlob(null);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+            if (generatedPdfUrl) URL.revokeObjectURL(generatedPdfUrl);
+            setGeneratedPdfUrl(null);
+        }
+    }, [qrCodeModal.isOpen]);
+
+    const copyImageToClipboard = async () => {
+        if (!coverImageBlob) return;
+        try {
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': coverImageBlob })
+            ]);
+            alert('Capa copiada! Agora é só colar no WhatsApp!');
+        } catch (err) {
+            console.error('Erro ao copiar imagem', err);
+            alert('Seu navegador não suporta copiar direto. Clique com o botão direito na imagem e selecione "Copiar imagem".');
+        }
+    };
+
     if (!isAuthenticated) {
         return (
             <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
@@ -202,8 +342,26 @@ export default function AdminApp() {
         );
     }
 
-    const totalConfirmados = familias.reduce((acc, familia) => acc + (familia.qtdConfirmados || 0), 0);
-    const familiasConfirmadas = familias.filter(f => f.qtdConfirmados > 0);
+    // Lógica do Filtro de Convidados
+    const stats = {
+        total: 0,
+        texto: ''
+    };
+    let familiasFiltradas = familias;
+
+    if (filtroConvidados === 'confirmados') {
+        stats.total = familias.reduce((acc, f) => acc + f.convidados.filter(c => c.confirmado).length, 0);
+        stats.texto = 'confirmados';
+        familiasFiltradas = familias.filter(f => f.convidados.some(c => c.confirmado));
+    } else if (filtroConvidados === 'pendentes') {
+        stats.total = familias.reduce((acc, f) => acc + f.convidados.filter(c => !c.confirmado).length, 0);
+        stats.texto = 'pendentes';
+        familiasFiltradas = familias.filter(f => f.convidados.some(c => !c.confirmado));
+    } else {
+        stats.total = familias.reduce((acc, f) => acc + f.convidados.length, 0);
+        stats.texto = 'convidados no total';
+        familiasFiltradas = familias;
+    }
 
     if (loading) {
         return (
@@ -285,71 +443,141 @@ export default function AdminApp() {
                     <>
                         {/* Cabeçalho exclusivo para impressão */}
                         <div className="hidden print:block mb-8 border-b border-slate-300 pb-4">
-                            <h1 className="text-2xl font-bold text-slate-800">Lista de Convidados Confirmados</h1>
-                            <p className="text-slate-500 mt-1">Total: {totalConfirmados} pessoas | {familiasConfirmadas.length} famílias</p>
+                            <h1 className="text-2xl font-bold text-slate-800">
+                                {filtroConvidados === 'confirmados' ? 'Lista de Convidados Confirmados' :
+                                    filtroConvidados === 'pendentes' ? 'Lista de Convidados Pendentes' :
+                                        'Lista de Todos os Convidados'}
+                            </h1>
+                            <p className="text-slate-500 mt-1">Total: {stats.total} {stats.texto} | {familiasFiltradas.length} famílias</p>
                         </div>
 
-                        {/* Dashboard Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 print:hidden">
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-                                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center shrink-0">
-                                    <CheckCircle2 className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">Total Confirmado</p>
-                                    <p className="text-3xl font-bold text-slate-800">{totalConfirmados}</p>
-                                </div>
-                            </div>
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0">
-                                    <Users className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">Famílias Confirmadas</p>
-                                    <p className="text-3xl font-bold text-slate-800">{familiasConfirmadas.length}</p>
-                                </div>
-                            </div>
+                        {/* Botões de Filtro */}
+                        <div className="flex flex-wrap gap-3 mb-8 print:hidden bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+                            <button
+                                onClick={() => setFiltroConvidados('confirmados')}
+                                className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${filtroConvidados === 'confirmados'
+                                    ? 'bg-green-100 text-green-700 shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <CheckCircle2 className="w-5 h-5" />
+                                Confirmados
+                            </button>
+                            <button
+                                onClick={() => setFiltroConvidados('pendentes')}
+                                className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${filtroConvidados === 'pendentes'
+                                    ? 'bg-yellow-100 text-yellow-700 shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <Loader2 className="w-5 h-5" />
+                                Pendentes
+                            </button>
+                            <button
+                                onClick={() => setFiltroConvidados('todos')}
+                                className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${filtroConvidados === 'todos'
+                                    ? 'bg-blue-100 text-blue-700 shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <Users className="w-5 h-5" />
+                                Todos
+                            </button>
+                        </div>
+
+                        {/* Resumo do Filtro Selecionado */}
+                        <div className="mb-6 px-2 print:hidden flex justify-between items-center text-slate-600">
+                            <p>Exibindo <strong className="text-slate-800">{stats.total}</strong> {stats.texto}.</p>
+                            <p className="text-sm">{familiasFiltradas.length} famílias</p>
                         </div>
 
                         {/* List of Guests */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden print:shadow-none print:border-none print:rounded-none">
-                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 print:hidden">
-                                <h2 className="text-lg font-semibold text-slate-800">Convidados Confirmados</h2>
+                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 print:hidden flex justify-between items-center">
+                                <h2 className="text-lg font-semibold text-slate-800">
+                                    {filtroConvidados === 'confirmados' ? 'Convidados Confirmados' :
+                                        filtroConvidados === 'pendentes' ? 'Convidados Pendentes' :
+                                            'Todos os Convidados'}
+                                </h2>
                             </div>
 
-                            {familiasConfirmadas.length === 0 ? (
+                            {familiasFiltradas.length === 0 ? (
                                 <div className="p-8 text-center text-slate-500 print:text-left print:p-0">
-                                    Nenhuma presença confirmada ainda.
+                                    Nenhum convidado encontrado para este filtro.
                                 </div>
                             ) : (
                                 <div className="divide-y divide-slate-100 print:divide-slate-300">
-                                    {familiasConfirmadas.map((familia) => (
-                                        <div key={familia.id} className="p-6 hover:bg-slate-50/50 transition-colors print:p-0 print:py-4 print:break-inside-avoid">
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-                                                <div>
-                                                    <h3 className="font-semibold text-slate-800 text-lg">{familia.familia}</h3>
-                                                    <p className="text-sm text-slate-500 capitalize">{familia.categoria}</p>
-                                                </div>
-                                                <div className="inline-flex items-center justify-center px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full print:bg-transparent print:text-slate-800 print:p-0 print:font-bold">
-                                                    {familia.qtdConfirmados} {familia.qtdConfirmados === 1 ? 'pessoa' : 'pessoas'}
-                                                </div>
-                                            </div>
+                                    {familiasFiltradas.map((familia) => {
+                                        const convidadosFiltrados = familia.convidados.filter(c => {
+                                            if (filtroConvidados === 'todos') return true;
+                                            if (filtroConvidados === 'confirmados') return c.confirmado;
+                                            return !c.confirmado;
+                                        });
 
-                                            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 print:bg-transparent print:border-none print:p-0">
-                                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                    {familia.convidados.map((convidado, index) => {
-                                                        if (!convidado.confirmado) return null;
-                                                        return (
+                                        if (convidadosFiltrados.length === 0) return null;
+
+                                        return (
+                                            <div key={familia.id} className="p-6 hover:bg-slate-50/50 transition-colors print:p-0 print:py-4 print:break-inside-avoid">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                                                    <div>
+                                                        <h3 className="font-semibold text-slate-800 text-lg">{familia.familia}</h3>
+                                                        <p className="text-sm text-slate-500 capitalize">{familia.categoria}</p>
+                                                    </div>
+                                                    <div className="flex flex-col sm:items-end gap-2">
+                                                        <div className={`inline-flex items-center justify-center px-3 py-1 text-sm font-medium rounded-full print:bg-transparent print:text-slate-800 print:p-0 print:font-bold ${filtroConvidados === 'confirmados' ? 'bg-green-100 text-green-700' :
+                                                            filtroConvidados === 'pendentes' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-blue-100 text-blue-700'
+                                                            }`}>
+                                                            {convidadosFiltrados.length} {convidadosFiltrados.length === 1 ? 'pessoa' : 'pessoas'}
+                                                        </div>
+                                                        <div className="flex gap-1 print:hidden">
+                                                            <button
+                                                                onClick={() => copyToClipboard(familia.id)}
+                                                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                                                                title="Copiar Link"
+                                                            >
+                                                                <Copy className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => shareOnWhatsApp(familia)}
+                                                                className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                                title="Enviar no WhatsApp"
+                                                            >
+                                                                <MessageCircle className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => openQrCode(familia)}
+                                                                className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                                                title="Ver Convite (Imagem com QR Code)"
+                                                            >
+                                                                <QrCode className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 print:bg-transparent print:border-none print:p-0">
+                                                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {convidadosFiltrados.map((convidado, index) => (
                                                             <li key={index} className="flex items-center gap-2 text-slate-700">
-                                                                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 print:hidden" />
-                                                                <span className="print:list-item print:ml-4">{convidado.nome}</span>
+                                                                {convidado.confirmado ? (
+                                                                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 print:hidden" />
+                                                                ) : (
+                                                                    <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0 print:hidden" />
+                                                                )}
+                                                                <span className="print:list-item print:ml-4 flex-1">{convidado.nome}</span>
+                                                                {!convidado.confirmado && (
+                                                                    <span className="text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full print:hidden">
+                                                                        Pendente
+                                                                    </span>
+                                                                )}
                                                             </li>
-                                                        );
-                                                    })}
-                                                </ul>
+                                                        ))}
+                                                    </ul>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -492,6 +720,137 @@ export default function AdminApp() {
                     </>
                 )}
             </main>
+
+            {/* Elemento oculto para geração em alta resolução (1080x) */}
+            {qrCodeModal.isOpen && (
+                <div className="fixed -left-[9999px] top-0 pointer-events-none">
+                    <div
+                        id="convite-canvas"
+                        className="relative w-[1024px] bg-white flex flex-col items-center justify-center"
+                    >
+                        <img src="/fundo-convite.jpg" alt="Fundo" className="w-full h-auto block" />
+
+                        {/* Posicionamento do QR code (Abaixado mais para alinhar com o quadrado laranja) */}
+                        <div className="absolute top-[61%] left-[50%] -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-[20px] shadow-sm">
+                            <QRCode
+                                value={qrCodeModal.link}
+                                size={170}
+                                level="H"
+                                fgColor="#8c1c2e" // Vermelho escuro
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* QR Code Modal */}
+            {qrCodeModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 animate-in fade-in overflow-y-auto">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden my-8">
+                        <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
+                            <h3 className="font-semibold text-slate-800 text-lg">Convite Personalizado</h3>
+                            <button
+                                onClick={() => setQrCodeModal({ isOpen: false, link: '', familiaNome: '' })}
+                                className="text-slate-400 hover:text-red-500 bg-white p-2 rounded-full shadow-sm hover:shadow transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 flex flex-col items-center bg-slate-50">
+                            {isGenerating || !previewUrl ? (
+                                <div className="w-full min-h-[400px] bg-slate-200 animate-pulse rounded-2xl flex items-center justify-center border border-slate-300">
+                                    <div className="text-slate-400 flex flex-col items-center gap-3">
+                                        <Loader2 className="w-8 h-8 animate-spin text-[#8c1c2e]" />
+                                        <p className="font-medium text-slate-500">Montando o PDF do convite...</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <img
+                                        src={previewUrl}
+                                        alt="Capa do Convite Gerado"
+                                        className="w-full rounded-2xl shadow-md border border-slate-200"
+                                    />
+                                    <p className="text-xs text-slate-400 mt-2 text-center">Mostrando apenas a capa do PDF</p>
+                                </>
+                            )}
+
+                            <div className="w-full mt-6 space-y-3">
+                                <p className="text-xs text-center text-slate-500 font-medium pb-2 border-b border-slate-200">
+                                    O arquivo final gerado será um documento PDF com 3 páginas.
+                                </p>
+
+                                {generatedPdfUrl ? (
+                                    <button
+                                        onClick={async () => {
+                                            if (!generatedPdfBlob) return;
+
+                                            const nomeSeguro = qrCodeModal.familiaNome
+                                                .normalize("NFD")
+                                                .replace(/[\u0300-\u036f]/g, "")
+                                                .replace(/[^a-zA-Z0-9]/g, '-')
+                                                .toLowerCase();
+                                            const nomeArquivo = `convite-${nomeSeguro}.pdf`;
+
+                                            // Nova API Nativa do Chrome/Mac para salvar arquivo (Força o nome correto ignorando bugs do Chrome)
+                                            if ('showSaveFilePicker' in window) {
+                                                try {
+                                                    const handle = await (window as any).showSaveFilePicker({
+                                                        suggestedName: nomeArquivo,
+                                                        types: [{
+                                                            description: 'Arquivo PDF',
+                                                            accept: { 'application/pdf': ['.pdf'] },
+                                                        }],
+                                                    });
+                                                    const writable = await handle.createWritable();
+                                                    await writable.write(generatedPdfBlob);
+                                                    await writable.close();
+                                                    return; // Sucesso com a API Nativa!
+                                                } catch (err: any) {
+                                                    if (err.name === 'AbortError') return; // Usuário clicou em cancelar
+                                                    console.error("File Picker falhou, tentando fallback", err);
+                                                }
+                                            }
+
+                                            // Fallback
+                                            saveAs(generatedPdfBlob, nomeArquivo);
+                                        }}
+                                        className="w-full bg-[#8c1c2e] text-white font-semibold py-3.5 rounded-xl hover:bg-[#731726] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        <Download className="w-5 h-5" /> Baixar PDF Completo
+                                    </button>
+                                ) : (
+                                    <button
+                                        disabled
+                                        className="w-full bg-[#8c1c2e]/50 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed"
+                                    >
+                                        <Download className="w-5 h-5" /> Preparando PDF...
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={copyImageToClipboard}
+                                    disabled={!coverImageBlob}
+                                    className="w-full bg-slate-200 text-slate-700 font-semibold py-3.5 rounded-xl hover:bg-slate-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Copy className="w-5 h-5" /> Copiar apenas a Capa
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(qrCodeModal.link);
+                                        alert('Link copiado com sucesso!');
+                                    }}
+                                    className="w-full bg-white text-slate-600 font-medium py-3 rounded-xl hover:bg-slate-50 border border-slate-200 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Copy className="w-4 h-4" /> Apenas copiar o link
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
