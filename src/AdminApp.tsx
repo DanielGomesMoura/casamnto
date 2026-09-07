@@ -267,6 +267,10 @@ export default function AdminApp() {
                     pdf.addPage([256, 256]);
                     pdf.addImage(dataUrl, 'PNG', 0, 0, 256, 256);
 
+                    // Cria uma área clicável (link) exatamente em cima do QR Code (e uma margem generosa ao redor)
+                    // X e Y calculados com base no centro do QR Code na página 256x256
+                    pdf.link(78, 106, 100, 100, { url: qrCodeModal.link });
+
                     const pdfBlob = pdf.output('blob');
                     setGeneratedPdfBlob(pdfBlob);
                     setGeneratedPdfUrl(URL.createObjectURL(pdfBlob));
