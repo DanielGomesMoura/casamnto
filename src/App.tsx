@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heart, MapPin, Calendar, Clock, CheckCircle2, XCircle, Menu, X, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MapPin, Calendar, Clock, CheckCircle2, XCircle, Menu, X, Info, ChevronLeft, ChevronRight, Gift } from 'lucide-react';
 import { doc, getDoc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase.config'; // Ajuste o caminho se necessário
 
@@ -316,7 +316,7 @@ export default function App() {
 
           {/* ROTEAMENTO SIMPLES */}
           <main className="min-h-screen">
-            {currentPage === 'home' && <HomeScreen conviteData={conviteData} />}
+            {currentPage === 'home' && <HomeScreen conviteData={conviteData} navigateTo={navigateTo} />}
             {currentPage === 'historia' && <HistoriaScreen />}
             {currentPage === 'padrinhos' && <PadrinhosScreen />}
             {currentPage === 'convidados' && <ConvidadosScreen />}
@@ -537,7 +537,7 @@ function HistoriaScreen() {
 // ==========================================
 // TELA 1: INÍCIO (Convite, Timer, RSVP, Mapas)
 // ==========================================
-function HomeScreen({ conviteData }: { conviteData: ConviteData | null }) {
+function HomeScreen({ conviteData, navigateTo }: { conviteData: ConviteData | null, navigateTo: (page: string) => void }) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Efeito do Slider de Imagens
@@ -587,6 +587,25 @@ function HomeScreen({ conviteData }: { conviteData: ConviteData | null }) {
         </div>
       </section>
 
+      {/* SEÇÃO NOSSA HISTÓRIA (Call to Action) */}
+      <section className="py-24 px-4 bg-white text-center">
+        <div className="max-w-3xl mx-auto">
+          <Heart className="mx-auto text-rose-300 mb-6" size={32} strokeWidth={1.5} />
+          <h2 className="font-serif text-4xl mb-6 text-stone-800">Como tudo começou</h2>
+          <p className="text-stone-600 mb-10 leading-relaxed px-4">
+            De um encontro inesperado até o altar, cada momento da nossa jornada nos trouxe até o momento mais feliz de nossas vidas.
+            Convidamos você a reviver os capítulos mais especiais da nossa história de amor.
+          </p>
+          <button
+            onClick={() => navigateTo('historia')}
+            className="inline-flex items-center justify-center px-8 py-3.5 bg-white text-stone-700 border border-stone-300 rounded-full font-medium tracking-widest uppercase text-sm hover:bg-stone-50 hover:text-stone-900 transition-all shadow-sm hover:shadow-md gap-3"
+          >
+            <Heart size={18} className="text-rose-400" />
+            Ler Nossa História
+          </button>
+        </div>
+      </section>
+
       {/* SEÇÃO RSVP (Confirmação) */}
       <section className="py-20 px-4 bg-stone-100">
         <div className="max-w-3xl mx-auto text-center mb-12">
@@ -594,6 +613,21 @@ function HomeScreen({ conviteData }: { conviteData: ConviteData | null }) {
           <p className="text-stone-600">Por favor, confirme sua presença até o dia 15 de Outubro de 2026. Sua resposta é muito importante para nossa organização.</p>
         </div>
         <RSVPForm conviteData={conviteData} />
+
+        {/* BOTÃO LISTA DE PRESENTES */}
+        <div className="max-w-3xl mx-auto mt-16 text-center border-t border-stone-200 pt-12">
+          <h3 className="font-serif text-3xl mb-4 text-stone-800">Nosso Lar</h3>
+          <p className="text-stone-600 mb-8 px-4">
+            Sua presença é o nosso maior presente. Mas se desejar nos presentear de outra forma, preparamos uma lista especial com muito carinho.
+          </p>
+          <button
+            onClick={() => navigateTo('presentes')}
+            className="inline-flex items-center justify-center px-8 py-4 bg-rose-400 text-white rounded-full font-medium tracking-wide uppercase hover:bg-rose-500 transition-colors shadow-lg hover:shadow-xl gap-3"
+          >
+            <Gift size={20} />
+            Ver Lista de Presentes
+          </button>
+        </div>
       </section>
 
       {/* SEÇÃO MAPAS (Localização) */}
