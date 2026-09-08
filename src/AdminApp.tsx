@@ -50,7 +50,7 @@ export default function AdminApp() {
     const [error, setError] = useState('');
 
     // Estado para o Modal do QR Code / Convite
-    const [qrCodeModal, setQrCodeModal] = useState({ isOpen: false, link: '', familiaNome: '' });
+    const [qrCodeModal, setQrCodeModal] = useState({ isOpen: false, link: '', familiaNome: '', categoria: '', id: '' });
     const [generatedPdfBlob, setGeneratedPdfBlob] = useState<Blob | null>(null);
     const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
     const [coverImageBlob, setCoverImageBlob] = useState<Blob | null>(null);
@@ -186,7 +186,7 @@ export default function AdminApp() {
 
     const openQrCode = (familia: FamiliaData) => {
         const link = window.location.origin + '/?id=' + familia.id;
-        setQrCodeModal({ isOpen: true, link, familiaNome: familia.familia });
+        setQrCodeModal({ isOpen: true, link, familiaNome: familia.familia, categoria: familia.categoria, id: familia.id });
     };
 
     useEffect(() => {
@@ -245,7 +245,7 @@ export default function AdminApp() {
                         });
                     };
 
-                    // PÁGINA 1: Imagem 3
+                    // PÁGINA 1: Imagem 3 global
                     try {
                         const b64_3 = await getBase64('/fundo-convite-3.jpg');
                         pdf.addPage([256, 256]);
@@ -254,16 +254,34 @@ export default function AdminApp() {
                         console.warn("Imagem 3 não encontrada");
                     }
 
-                    // PÁGINA 2: Imagem 2
-                    try {
-                        const b64_2 = await getBase64('/fundo-convite-2.jpg');
-                        pdf.addPage([256, 256]);
-                        pdf.addImage(b64_2, 'JPEG', 0, 0, 256, 256);
-                    } catch (e) {
-                        console.warn("Imagem 2 não encontrada");
+                    if (qrCodeModal.categoria === 'padrinho' || qrCodeModal.categoria === 'madrinha') {
+                        // Se for padrinho/madrinha, adiciona as páginas específicas da pasta deles
+                        try {
+                            const b64_p2 = await getBase64(`/${qrCodeModal.id}/2.jpg`);
+                            pdf.addPage([256, 256]);
+                            pdf.addImage(b64_p2, 'JPEG', 0, 0, 256, 256);
+                        } catch (e) {
+                            console.warn("Imagem 2 do padrinho não encontrada");
+                        }
+                        try {
+                            const b64_p3 = await getBase64(`/${qrCodeModal.id}/3.jpg`);
+                            pdf.addPage([256, 256]);
+                            pdf.addImage(b64_p3, 'JPEG', 0, 0, 256, 256);
+                        } catch (e) {
+                            console.warn("Imagem 3 do padrinho não encontrada");
+                        }
+                    } else {
+                        // PÁGINA 2 Global (para convidados normais)
+                        try {
+                            const b64_2 = await getBase64('/fundo-convite-2.jpg');
+                            pdf.addPage([256, 256]);
+                            pdf.addImage(b64_2, 'JPEG', 0, 0, 256, 256);
+                        } catch (e) {
+                            console.warn("Imagem 2 não encontrada");
+                        }
                     }
 
-                    // PÁGINA 3: Capa gerada (QR Code)
+                    // ÚLTIMA PÁGINA: Capa gerada (QR Code)
                     pdf.addPage([256, 256]);
                     pdf.addImage(dataUrl, 'PNG', 0, 0, 256, 256);
 
@@ -754,7 +772,7 @@ export default function AdminApp() {
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
                             <h3 className="font-semibold text-slate-800 text-lg">Convite Personalizado</h3>
                             <button
-                                onClick={() => setQrCodeModal({ isOpen: false, link: '', familiaNome: '' })}
+                                onClick={() => setQrCodeModal({ isOpen: false, link: '', familiaNome: '', categoria: '', id: '' })}
                                 className="text-slate-400 hover:text-red-500 bg-white p-2 rounded-full shadow-sm hover:shadow transition-all"
                             >
                                 <X className="w-5 h-5" />
@@ -782,7 +800,9 @@ export default function AdminApp() {
 
                             <div className="w-full mt-6 space-y-3">
                                 <p className="text-xs text-center text-slate-500 font-medium pb-2 border-b border-slate-200">
-                                    O arquivo final gerado será um documento PDF com 3 páginas.
+                                    {qrCodeModal.categoria === 'padrinho' || qrCodeModal.categoria === 'madrinha'
+                                        ? "O arquivo final gerado será um documento PDF com 4 páginas (inclui anexos exclusivos)."
+                                        : "O arquivo final gerado será um documento PDF com 3 páginas."}
                                 </p>
 
                                 {generatedPdfUrl ? (
